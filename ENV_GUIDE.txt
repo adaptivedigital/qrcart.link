@@ -1,0 +1,16 @@
+# SUPABASE CONNECTION STRINGS
+# 1. Log in to Supabase (https://supabase.com)
+# 2. Go to Project Settings > Database
+# 3. Look for "Connection String" > "URI"
+
+# [DATABASE_URL]
+# Use the connection string for "Transaction Mode" (Port 6543)
+# It should look like this (Make sure to add ?pgbouncer=true at the end):
+# postgres://postgres.[YOUR-ID]:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+DATABASE_URL="PASTE_HERE"
+
+# [DIRECT_URL]
+# Use the connection string for "Session Mode" (Port 5432)
+# It should look like this:
+# postgres://postgres.[YOUR-ID]:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:5432/postgres
+DIRECT_URL="PASTE_HERE"
