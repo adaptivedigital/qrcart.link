@@ -1,9 +1,9 @@
-import {
-    Users,
+Users,
     ShoppingBag,
     DollarSign,
     TrendingUp,
-    ExternalLink
+    ExternalLink,
+    BarChart2
 } from 'lucide-react';
 
 export default function DashboardHome() {
