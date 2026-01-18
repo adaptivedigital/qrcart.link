@@ -9,7 +9,8 @@ import {
     Palette,
     BarChart2,
     LogOut,
-    ShoppingBasket
+    ShoppingBasket,
+    User
 } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -29,14 +30,14 @@ export default function DashboardLayout({
     ];
 
     return (
-        <div className="flex min-h-screen bg-[#0f172a]">
+        <div className="flex min-h-screen bg-gray-50">
             {/* Sidebar */}
-            <aside className="w-64 border-r border-white/10 bg-[#1e293b]/50 backdrop-blur-xl sticky top-0 h-screen flex flex-col">
-                <div className="p-6 flex items-center gap-2 mb-8">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-                        <ShoppingBag className="text-white" size={20} />
+            <aside className="w-64 border-r border-gray-200 bg-white sticky top-0 h-screen flex flex-col">
+                <div className="p-8 flex items-center gap-2 mb-4">
+                    <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-green-100">
+                        <ShoppingBag size={20} />
                     </div>
-                    <span className="font-bold text-xl text-white tracking-tight">QRCart</span>
+                    <span className="font-bold text-xl text-gray-900 tracking-tight">QRCart</span>
                 </div>
 
                 <nav className="flex-1 px-4 space-y-1">
@@ -47,34 +48,52 @@ export default function DashboardLayout({
                                 key={item.href}
                                 href={item.href}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
-                                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                    ? 'bg-primary text-white shadow-md shadow-green-100'
+                                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                                     }`}
                             >
-                                <item.icon size={20} className={isActive ? 'text-white' : 'group-hover:text-white'} />
-                                <span className="font-medium">{item.name}</span>
+                                <item.icon size={20} className={isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-900'} />
+                                <span className="font-medium text-sm">{item.name}</span>
                             </Link>
                         );
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-white/5">
-                    <button className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200">
-                        <LogOut size={20} />
-                        <span className="font-medium">Sign Out</span>
+                <div className="p-4 border-t border-gray-100">
+                    <div className="flex items-center gap-3 px-4 py-4 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                            <User size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 truncate">Store Owner</p>
+                            <p className="text-xs text-gray-500 truncate">owner@qrcart.link</p>
+                        </div>
+                    </div>
+                    <button className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200">
+                        <LogOut size={18} />
+                        <span className="font-medium text-sm">Sign Out</span>
                     </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto">
-                <header className="h-16 border-b border-white/5 bg-[#0f172a]/50 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-8">
-                    <h1 className="text-sm font-medium text-slate-400">Dashboard / <span className="text-white">{navItems.find(n => n.href === pathname)?.name || 'Home'}</span></h1>
+            <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                <header className="h-20 border-b border-gray-200 bg-white/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between px-8 shrink-0">
+                    <h2 className="text-lg font-bold text-gray-900">
+                        {navItems.find(n => n.href === pathname)?.name || 'Dashboard'}
+                    </h2>
                     <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10"></div>
+                        <div className="text-right hidden sm:block">
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Plan</p>
+                            <p className="text-sm font-bold text-primary">Free Forever</p>
+                        </div>
+                        <div className="h-8 w-px bg-gray-200 mx-2"></div>
+                        <Link href="/" className="btn btn-secondary h-10 px-4 text-sm font-semibold">
+                            Visit Store
+                        </Link>
                     </div>
                 </header>
-                <div className="p-8">
+                <div className="flex-1 overflow-y-auto p-8">
                     {children}
                 </div>
             </main>

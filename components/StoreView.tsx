@@ -1,30 +1,22 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ShoppingCart, Plus, Minus, Phone } from 'lucide-react';
+import { ShoppingBag, Plus, Minus, ArrowLeft, ArrowRight, Check, X, Smartphone, MessageSquare } from 'lucide-react';
 import { Product } from '@/lib/googleSheets';
-import { CartItem, generateWhatsAppLink } from '@/lib/whatsapp';
+import { CartItem, generateWhatsAppLink, CustomerDetails } from '@/lib/whatsapp';
 
 interface StoreViewProps {
     products: Product[];
-    storeId: string; // The sheet ID
+    storeId: string;
 }
 
+type ViewState = 'shop' | 'checkout' | 'success';
+
 export default function StoreView({ products, storeId }: StoreViewProps) {
+    const [view, setView] = useState<ViewState>('shop');
     const [cart, setCart] = useState<{ [key: string]: number }>({});
-    const [phoneNumber, setPhoneNumber] = useState(''); // Allow user to set phone number or merchant could set it in config (if we had config)
-
-    // NOTE: In a real app, the Merchant's phone number would come from the sheet config.
-    // For MVP, we'll ask the USER (Customer) to send it to a default number OR ask for merchant number?
-    // The business model says "Receive orders on WhatsApp". So the Store Owner's number needs to be known.
-    // PROPOSAL: We'll assume the Sheet has a metadata row or we default to a placeholder.
-    // OR: We ask the user to input the "Merchant Phone" on the landing page/creation step.
-    // Since we passed just `storeId`, let's assume for this MVP the customer enters the Merchant Number to simulate the functionality, 
-    // or we hardcode a demo number if not found.
-    // BETTER MVP: We scan the products for a special row or just let the user input "Where to send order?" (simulating the Merchant setup).
-
-    // Let's add a "Store Settings" input at top for Demo purposes if not configured.
-    const [merchantPhone, setMerchantPhone] = useState('15551234567');
+    const [customer, setCustomer] = useState<CustomerDetails>({ name: '', address: '' });
+    const [merchantPhone, setMerchantPhone] = useState('15551234567'); // Demo default
 
     const addToCart = (product: Product) => {
         setCart(prev => ({
@@ -35,12 +27,12 @@ export default function StoreView({ products, storeId }: StoreViewProps) {
 
     const removeFromCart = (product: Product) => {
         setCart(prev => {
-            const newCount = (prev[product.id] || 0) - 1;
-            if (newCount <= 0) {
+            const current = prev[product.id] || 0;
+            if (current <= 1) {
                 const { [product.id]: _, ...rest } = prev;
                 return rest;
             }
-            return { ...prev, [product.id]: newCount };
+            return { ...prev, [product.id]: current - 1 };
         });
     };
 
@@ -55,104 +47,214 @@ export default function StoreView({ products, storeId }: StoreViewProps) {
     const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const totalCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
-    const whatsappLink = generateWhatsAppLink(merchantPhone, cartItems);
+    const handleCheckout = (e: React.FormEvent) => {
+        e.preventDefault();
+        const link = generateWhatsAppLink(merchantPhone, cartItems, customer);
+        window.open(link, '_blank');
+        setView('success');
+    };
+
+    if (view === 'success') {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+                <div className="card max-w-md w-full text-center p-12">
+                    <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <Check size={40} />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-4">Order Sent!</h2>
+                    <p className="text-gray-600 mb-8">Your order has been sent to the merchant via WhatsApp. They will contact you shortly to confirm.</p>
+                    <button
+                        onClick={() => {
+                            setCart({});
+                            setView('shop');
+                        }}
+                        className="btn btn-primary w-full h-12"
+                    >
+                        Back to Shop
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-slate-950 pb-24">
-            {/* Store Header */}
-            <div className="bg-slate-900 border-b border-white/10 p-4 sticky top-0 z-40 backdrop-blur-md bg-opacity-80">
-                <div className="container flex justify-between items-center">
-                    <h1 className="text-xl font-bold text-white m-0 h-auto">Store {storeId.slice(0, 6)}...</h1>
+        <div className="min-h-screen bg-white pb-32">
+            {/* Header */}
+            <header className="border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-40">
+                <div className="container flex items-center justify-between h-20">
+                    <div className="flex items-center gap-3">
+                        {view === 'checkout' && (
+                            <button onClick={() => setView('shop')} className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <ArrowLeft size={20} />
+                            </button>
+                        )}
+                        <h1 className="font-bold text-xl tracking-tight">
+                            {view === 'shop' ? 'The Store' : 'Checkout'}
+                        </h1>
+                    </div>
                     <div className="relative">
-                        <ShoppingCart className="text-white" />
+                        <ShoppingBag className={totalCount > 0 ? 'text-primary' : 'text-gray-300'} />
                         {totalCount > 0 && (
-                            <span className="absolute -top-2 -right-2 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                            <span className="absolute -top-2 -right-2 bg-primary text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
                                 {totalCount}
                             </span>
                         )}
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="container py-8">
-
-                {/* Demo Config */}
-                <div className="mb-8 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm">
-                    <p className="text-blue-300 font-bold mb-2">Demo Configuration</p>
-                    <label className="block text-muted mb-1">Send orders to (Merchant WhatsApp):</label>
-                    <input
-                        type="text"
-                        value={merchantPhone}
-                        onChange={e => setMerchantPhone(e.target.value)}
-                        className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white w-full max-w-xs"
-                    />
-                </div>
-
-                {products.length === 0 ? (
-                    <div className="text-center py-20">
-                        <p className="text-muted text-xl">No products found in this sheet.</p>
-                        <p className="text-sm text-muted mt-2">Make sure your sheet columns are: Name, Price, Image, Description</p>
+            <main className="container py-8">
+                {/* Demo Banner */}
+                {view === 'shop' && (
+                    <div className="mb-8 p-4 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                                <Smartphone size={20} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-900">Merchant WhatsApp</p>
+                                <p className="text-xs text-gray-500">Demo orders will be sent to this number</p>
+                            </div>
+                        </div>
+                        <input
+                            type="text"
+                            value={merchantPhone}
+                            onChange={e => setMerchantPhone(e.target.value)}
+                            className="input w-32 h-10 text-center font-medium"
+                        />
                     </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {products.map(product => (
-                            <div key={product.id} className="card p-0 overflow-hidden flex flex-col h-full group">
-                                <div className="aspect-video bg-slate-800 relative overflow-hidden">
-                                    {product.image ? (
-                                        <img src={product.image} alt={product.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-600 bg-slate-900">
-                                            No Image
+                )}
+
+                {view === 'shop' ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {products.map(product => {
+                            const quantity = cart[product.id] || 0;
+                            return (
+                                <div key={product.id} className="group relative">
+                                    <div className="aspect-square rounded-3xl bg-gray-100 overflow-hidden mb-4 relative">
+                                        {product.image ? (
+                                            <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                <ShoppingBag size={48} />
+                                            </div>
+                                        )}
+                                        <div className="absolute bottom-4 right-4 bg-white px-3 py-1 rounded-full font-bold shadow-lg border border-gray-100">
+                                            ${product.price.toFixed(2)}
                                         </div>
-                                    )}
-                                    <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded text-white font-bold">
-                                        ${product.price.toFixed(2)}
                                     </div>
-                                </div>
-
-                                <div className="p-4 flex-1 flex flex-col">
-                                    <h3 className="text-lg font-bold text-white mb-1">{product.name}</h3>
-                                    <p className="text-sm text-muted mb-4 line-clamp-2 flex-1">{product.description}</p>
-
-                                    <div className="pt-4 mt-auto border-t border-white/5 flex items-center justify-between">
-                                        {cart[product.id] ? (
-                                            <div className="flex items-center gap-3 bg-slate-800 rounded-lg p-1">
-                                                <button onClick={() => removeFromCart(product)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-700 rounded text-white">-</button>
-                                                <span className="font-bold w-4 text-center">{cart[product.id]}</span>
-                                                <button onClick={() => addToCart(product)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-700 rounded text-white">+</button>
+                                    <div className="px-1 flex justify-between items-start gap-4">
+                                        <div>
+                                            <h3 className="font-bold text-gray-900 text-lg mb-1">{product.name}</h3>
+                                            <p className="text-sm text-gray-500 line-clamp-1">{product.description}</p>
+                                        </div>
+                                        {quantity > 0 ? (
+                                            <div className="flex items-center gap-2 bg-gray-100 rounded-full p-1 border border-gray-200">
+                                                <button onClick={() => removeFromCart(product)} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-full transition-colors shadow-sm">
+                                                    <Minus size={16} />
+                                                </button>
+                                                <span className="font-bold w-4 text-center text-sm">{quantity}</span>
+                                                <button onClick={() => addToCart(product)} className="w-8 h-8 flex items-center justify-center hover:bg-white rounded-full transition-colors shadow-sm">
+                                                    <Plus size={16} />
+                                                </button>
                                             </div>
                                         ) : (
-                                            <button onClick={() => addToCart(product)} className="btn btn-secondary w-full">
-                                                Add to Cart
+                                            <button
+                                                onClick={() => addToCart(product)}
+                                                className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-green-100 hover:scale-110 transition-transform active:scale-95"
+                                            >
+                                                <Plus size={20} />
                                             </button>
                                         )}
                                     </div>
                                 </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="max-w-xl mx-auto">
+                        <form onSubmit={handleCheckout} className="space-y-8">
+                            <div className="space-y-4">
+                                <h3 className="text-xl font-bold">Delivery Details</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            className="input h-12"
+                                            placeholder="Enter your full name"
+                                            value={customer.name}
+                                            onChange={e => setCustomer(prev => ({ ...prev, name: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
+                                        <textarea
+                                            rows={3}
+                                            required
+                                            className="input py-3"
+                                            placeholder="Enter your detailed address"
+                                            value={customer.address}
+                                            onChange={e => setCustomer(prev => ({ ...prev, address: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                        ))}
+
+                            <div className="space-y-4">
+                                <h3 className="text-xl font-bold">Order Summary</h3>
+                                <div className="card border-gray-100 p-0 overflow-hidden">
+                                    <div className="divide-y divide-gray-100">
+                                        {cartItems.map(item => (
+                                            <div key={item.id} className="p-4 flex items-center justify-between">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-lg bg-gray-50 flex-shrink-0">
+                                                        {item.image && <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-sm text-gray-900">{item.name}</p>
+                                                        <p className="text-xs text-gray-500">{item.quantity} x ${item.price.toFixed(2)}</p>
+                                                    </div>
+                                                </div>
+                                                <p className="font-bold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="bg-gray-50 p-4 flex justify-between items-center bg-opacity-50">
+                                        <span className="font-bold text-gray-500">Order Total</span>
+                                        <span className="text-xl font-bold text-gray-900">${total.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" className="btn btn-primary w-full h-14 text-lg gap-3">
+                                <MessageSquare size={20} />
+                                <span>Place Order via WhatsApp</span>
+                                <ArrowRight size={18} />
+                            </button>
+                        </form>
                     </div>
                 )}
-            </div>
+            </main>
 
-            {/* Floating Checkout */}
-            {totalCount > 0 && (
-                <div className="fixed bottom-6 left-0 right-0 z-50 px-4">
-                    <div className="container max-w-md mx-auto">
-                        <a
-                            href={whatsappLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="btn btn-primary w-full shadow-xl flex items-center justify-between py-4 text-lg animate-bounce-subtle"
+            {/* Sticky Bottom Cart Bar */}
+            {totalCount > 0 && view === 'shop' && (
+                <div className="fixed bottom-8 left-0 right-0 z-50 px-6">
+                    <div className="container max-w-lg mx-auto">
+                        <button
+                            onClick={() => setView('checkout')}
+                            className="w-full h-16 bg-gray-900 text-white rounded-2xl shadow-2xl flex items-center justify-between px-6 hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
-                            <div className="flex items-center gap-2">
-                                <div className="bg-white/20 px-2 py-0.5 rounded text-sm font-bold">{totalCount} items</div>
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white/20 px-2 py-0.5 rounded text-xs font-bold">{totalCount} items</div>
+                                <span className="font-bold text-lg">View Cart</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span>Checkout on WhatsApp</span>
-                                <Phone size={20} />
+                            <div className="flex items-center gap-3">
+                                <span className="font-bold text-lg">${total.toFixed(2)}</span>
+                                <ArrowRight size={20} className="text-primary" />
                             </div>
-                            <div className="font-bold">${total.toFixed(2)}</div>
-                        </a>
+                        </button>
                     </div>
                 </div>
             )}
