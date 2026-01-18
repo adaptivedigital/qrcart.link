@@ -1,4 +1,5 @@
-Users,
+import {
+    Users,
     ShoppingBag,
     DollarSign,
     TrendingUp,
@@ -68,4 +69,3 @@ export default function DashboardHome() {
         </div>
     );
 }
-
